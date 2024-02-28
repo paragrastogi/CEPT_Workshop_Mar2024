@@ -619,13 +619,28 @@ def ensure_full_year(xy_train, tol=0.1):
     return xy_train
 
 
+def dd_ashrae(xin, resolution):
+    # Function to calculate Degree Days using the ASHRAE method outlined in Std 169.
+
+    bp = {'cdd':10, 'hdd':18.3}
+    dailyness = xin.resample('1D').mean()
+    
+    hdd = (bp['hdd']-dailyness[dailyness<bp['hdd']]).resample(resolution).sum()
+    
+    cdd = (dailyness[dailyness>bp['cdd']]-bp['cdd']).resample(resolution).sum()
+
+    timer = dailyness.resample(resolution).first().index
+
+    return hdd, cdd, timer
+
+
 def dd(xin, bp):
     # Function to calculate Degree Days from Pandas column and return annual sum values.
     # BP is balance point, i.e., the point from which hdd and cdd are calculated. 
 
     dd = (xin - bp)
-    cdd = dd[dd>0].resample('1Y').sum()
-    hdd = np.abs(dd[dd<0].resample('1Y').sum())
+    cdd = dd[dd>0].resample('1YE').sum()
+    hdd = np.abs(dd[dd<0].resample('1YE').sum())
 
     return hdd, cdd
 
