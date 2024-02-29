@@ -3,7 +3,7 @@ import pandas as pd
 from lib.petites import dd_ashrae
 
 
-def get_weather_data(path_weather):
+def get_weather_data(path_weather, resolution:str='1ME'):
 
     # Read the weather file.
     weather = pd.read_csv(path_weather + "weather.csv")
@@ -16,8 +16,7 @@ def get_weather_data(path_weather):
         if dbt.loc[:,col].isna().any():
             dbt.loc[:,col] = dbt.loc[:,col].interpolate(method='linear')
 
-    # We are going to use Monthly HDD and CDD.
-    resolution = '1ME'
+    # We are going to calculate HDD and CDD based on the incoming resolution.
     # Calculate HDD and CDD for each site.
     hdd_temp = dict()
     cdd_temp = dict()

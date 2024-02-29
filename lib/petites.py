@@ -626,8 +626,10 @@ def dd_ashrae(xin, resolution):
     dailyness = xin.resample('1D').mean()
     
     hdd = (bp['hdd']-dailyness[dailyness<bp['hdd']]).resample(resolution).sum()
+    hdd.fillna(0, inplace=True)
     
     cdd = (dailyness[dailyness>bp['cdd']]-bp['cdd']).resample(resolution).sum()
+    cdd.fillna(0, inplace=True)
 
     timer = dailyness.resample(resolution).first().index
 
