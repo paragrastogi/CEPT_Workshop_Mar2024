@@ -151,10 +151,10 @@ def get_weather(stcode, fpath):
             # Ensure the index is hourly.
             # Save the text columns first.
             wdata_text_col = wdata.select_dtypes(include=object, exclude=np.number)
-            wdata_text_col = wdata_text_col.resample('1H').first().sort_index(axis=0, ascending=True)
+            wdata_text_col = wdata_text_col.resample('1h').first().sort_index(axis=0, ascending=True)
             # Then take the means of the numeric columns.
             wdata_num_col = wdata.select_dtypes(include=np.number, exclude=object)
-            wdata_num_col = wdata_num_col.resample('1H').mean()
+            wdata_num_col = wdata_num_col.resample('1h').mean()
             # Interpolate resulting nans.
             wdata_num_col.interpolate(method = 'linear', limit = 6, limit_area = None, inplace = True)
 
@@ -229,7 +229,7 @@ def read_fin4(fpath):
 
     if len(wdata['year'].unique()) > 1:
         wdata['year'] = 2223
-    wdata_index = pd.date_range(start='{}-01-01 00:00:00'.format(wdata['year'].unique()[0]), end='{}-12-31 23:00:00'.format(wdata['year'].unique()[0]), freq='1H')
+    wdata_index = pd.date_range(start='{}-01-01 00:00:00'.format(wdata['year'].unique()[0]), end='{}-12-31 23:00:00'.format(wdata['year'].unique()[0]), freq='1h')
 
     if wdata_index.shape[0]==8784:
         if wdata.shape[0]==8784:
@@ -347,7 +347,7 @@ def read_epw(fpath, epw_colnames=epw_colnames):
     
     for col in wdata.columns:
         
-        if isinstance(type(wdata[col][0]), str):
+        if isinstance(type(wdata.loc[:,col].iloc[0]), str):
             wdata[col] = wdata[col].apply(lambda x: (x.strip()))
         
         if col in ['year', 'month', 'day', 'hour']:
@@ -616,7 +616,7 @@ def give_weather(df, locdata=None, stcode=None, header=None,
         esp_master.index = pd.date_range(
             start='{:04d}-01-01 00:00:00'.format(year),
             end='{:04d}-12-31 23:00:00'.format(year),
-            freq='1H')
+            freq='1h')
 
         # Save month and day to write out to file as separate rows.
         monthday = (esp_master.loc[:, ['day', 'month']]).astype(int)
