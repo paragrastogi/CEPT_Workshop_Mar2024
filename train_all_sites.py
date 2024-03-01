@@ -116,10 +116,12 @@ for usage in simpleUsages:
 
         rmse_no_cat = root_mean_squared_error(y_test, y_pred_no_cat)
         mae_no_cat = median_absolute_error(y_test, y_pred_no_cat)
-        print(f"No categorial Encoding Model - Root Mean Squared Error: {rmse_no_cat}")
-        print(f"No categorical Encoding Model - Mean Absolute Error: {mae_no_cat}")
+        print(f"No categorial Model - Root Mean Squared Error: {rmse_no_cat}")
+        print(f"No categorical Model - Mean Absolute Error: {mae_no_cat}")
 
-        models.append(dict(btype=usage, model=model_no_cat, rmse=rmse_no_cat, mae=mae_no_cat, ymean=y.squeeze().mean(), ymedian=y.squeeze().median(), ystd=y.squeeze().std(), y99=y.squeeze().quantile(0.99), y01=y.squeeze().quantile(0.01)))
+        store_model = list(model_no_cat.coef_[0]) + [model_no_cat.intercept_[0]]
+
+        models.append(dict(btype=usage, model=store_model, rmse=rmse_no_cat, mae=mae_no_cat, ymean=y.squeeze().mean(), ymedian=y.squeeze().median(), ystd=y.squeeze().std(), y99=y.squeeze().quantile(0.99), y01=y.squeeze().quantile(0.01)))
 
 models = pd.DataFrame(models)
 
