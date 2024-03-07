@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 from lib.petites import dd_ashrae
 
-def get_future_weather(listFutureFiles, pathSave, scenario, resolution):
+def future_weather(listFutureFiles, pathSave, scenario, resolution):
 
     if os.path.isfile(pathSave):
         loaded = pd.read_pickle(pathSave)

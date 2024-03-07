@@ -39,7 +39,10 @@ import lib.default_colours as colours
 # Import a function to create a portfolio of buildings to use in this exercise.
 from lib.create_portfolio import create_portfolio
 
-from lib.get_future_weather import get_future_weather
+from lib.get_future_weather import future_weather
+from lib.get_financials import income_value, electricity_cost
+from lib.get_carbon import grid_carbon
+from lib.get_measures import apply_measures
 
 # Set the random seed to a specific value so the experiment is repeatable. 
 # See https://en.wikipedia.org/wiki/Random_seed for more information on what this means.
@@ -51,6 +54,11 @@ randomseed = 42 # round(datetime.timestamp(datetime.now()))
 # Read weather data from location.
 station = 'Glasgow'
 epwFolder = 'GBR_SCT_Glasgow.Intl.AP.031400'
+
+TARGET_INTENSITY_DECREASE = 0.98 # 98% decrease in energy intensity for buildings.
+TARGET_YEAR = 2050 # Year by which target intensity decrease must be achieved.
+
+PATH_MEASURES_FILE = "/Users/prastogi/Library/CloudStorage/OneDrive-Personal/CEPT/Workshop-2024/DecarbPlan.xlsx"
 
 # I've used Glasgow as an example here and we will use Ahmedabad for the exercise. 
 # However, feel free to download weather data for any other city
@@ -98,11 +106,11 @@ plt.bar(x=ploty.index, height=ploty, width=300)
 # plt.show()
 
 # Create a portfolio to work with for this exercise.
-size = 100
-btypes = ['Education', 'Office']
-location = ['all']
-randomness = True # This will tell the function below to inject a bit of randomness in each model so each building's response is slightly different.
-portfolio = create_portfolio(size, btypes, location, path_models='./', randomness=randomness)
+PORTFOLIO_SIZE = 100
+TYPES_INCL = ['Education', 'Office']
+LOCATIONS = ['all']
+RANDOMNESS = True # This will tell the function below to inject a bit of randomness in each model so each building's response is slightly different.
+portfolio = create_portfolio(PORTFOLIO_SIZE, TYPES_INCL, LOCATIONS, path_models='./', randomness=RANDOMNESS)
 
 # Congratulations, you now have a portfolio of buildings in Ahmedabad. Each building has a unique ID, a building type (btype), and linear regression model representing its performance based on HDD and CDD.
 
@@ -146,7 +154,7 @@ SCENARIO = 'ssp585'
 listFutureFiles = glob.glob(f'{pathWthrFolder}/{station}_CMIP6/*.csv')
 pathSave = f'{pathWthrFolder}/future_dd.pickle'
 
-hddFuture, cddFuture = get_future_weather(listFutureFiles, pathSave, scenario=SCENARIO, resolution=RESOLUTION)
+hddFuture, cddFuture = future_weather(listFutureFiles, pathSave, scenario=SCENARIO, resolution=RESOLUTION)
 
 ploty1 = cdd.resample('1YE').sum()
 ploty2 = cddFuture.resample('1YE').sum().rolling('1200D').mean()
@@ -175,6 +183,7 @@ for ccmodel in hddFuture.columns:
 
 performancePortfolioFuture = pd.concat(listpf, axis=1)
 
+
 ploty1 = performancePortfolioHistorical.resample('1YE').sum()
 ploty2 = performancePortfolioFuture.resample('1YE').sum().rolling('1200D').mean()
 # ploty2 = cddFuture.rolling(window='360D').sum()
@@ -183,5 +192,29 @@ ax = axes #.flatten()
 fig.tight_layout(pad=3)
 plt.plot(ploty2.index, ploty2, color=colours.orange)
 plt.plot(ploty1.index, ploty1, color=colours.blue)
+
+# Let's simplify the future performance projection to end in 2050 and clip the years that have already passed so we can join it to the measured/historical performance.
+performancePortfolioFutureMean = performancePortfolioFuture.mean(axis=1)
+performancePortfolioFutureMean.name='mean'
+performancePortfolioFutureMean = performancePortfolioFutureMean.loc[(performancePortfolioFutureMean.index.year>performancePortfolioHistorical.index.year.max()) | (performancePortfolioFutureMean.index.year<TARGET_YEAR)]
+
+performancePortfolio = pd.DataFrame(pd.concat([performancePortfolioHistorical, performancePortfolioFutureMean]))
+performancePortfolio.sort_index(inplace=True)
+performancePortfolio.columns = ['consumption_kWh']
+
+# Get grid carbon emissions factors. These vary over time and are projected into the future.
+intensityCurve = grid_carbon(start_year=performancePortfolio.index.year.min(), end_year=TARGET_YEAR)
+
+# Get the constant electricity cost, income per building, and value of each building.
+unitCost = electricity_cost()
+incomePerBuilding, valueperBuilding = income_value()
+
+performancePortfolio = pd.concat([performancePortfolio, pd.DataFrame(columns=['size'],index=performancePortfolio.index,data=PORTFOLIO_SIZE)], axis=1)
+performancePortfolio.loc[:,'income'] = performancePortfolio.loc[:,'size'] * incomePerBuilding
+performancePortfolio.loc[:,'value'] = performancePortfolio.loc[:,'size'] * valueperBuilding
+performancePortfolio.loc[:,'runningCosts'] = performancePortfolio.loc[:,'consumption_kWh']*unitCost
+
+# Apply the measures you've specified in your Excel file.
+performancePortfolio = apply_measures(performancePortfolio, PATH_MEASURES_FILE)
 
 print(portfolio)
