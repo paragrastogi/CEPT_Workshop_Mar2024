@@ -1,6 +1,7 @@
 # Import various standard modules.
 import glob, os, copy, pickle
 from datetime import datetime
+import time
 
 # Computational modules.
 import pandas as pd
@@ -43,6 +44,7 @@ from lib.get_future_weather import future_weather
 from lib.get_financials import income_value, electricity_cost
 from lib.get_carbon import grid_carbon
 from lib.get_measures import apply_measures
+from lib.get_performance import calc_performance
 
 # Set the random seed to a specific value so the experiment is repeatable. 
 # See https://en.wikipedia.org/wiki/Random_seed for more information on what this means.
@@ -58,15 +60,16 @@ epwFolder = 'GBR_SCT_Glasgow.Intl.AP.031400'
 TARGET_INTENSITY_DECREASE = 0.98 # 98% decrease in energy intensity for buildings.
 TARGET_YEAR = 2050 # Year by which target intensity decrease must be achieved.
 
-PATH_MEASURES_FILE = "/Users/prastogi/Library/CloudStorage/OneDrive-Personal/CEPT/Workshop-2024/DecarbPlan.xlsx"
+PATH_TOP_FOLDER = '/Users/prastogi/Library/CloudStorage/OneDrive-Personal/CEPT/Workshop-2024'
+PATH_MEASURES_FILE = f'{PATH_TOP_FOLDER}/DecarbPlan-v2.xlsx'
 
 # I've used Glasgow as an example here and we will use Ahmedabad for the exercise. 
 # However, feel free to download weather data for any other city
 # from http://climate.onebuilding.org/default.html if you like.
 
-pathWthrFolder = '/Users/prastogi/Library/CloudStorage/OneDrive-Personal/CEPT/Workshop-2024/Data/WeatherData/' 
+PATH_WEATHER_FOLDER = f'{PATH_TOP_FOLDER}/Data/WeatherData/' 
 
-listWfiles = glob.glob(f'{pathWthrFolder}/{epwFolder}/*.epw')
+listWfiles = glob.glob(f'{PATH_WEATHER_FOLDER}/{epwFolder}/*.epw')
 # Python can interpret the Unix file separator, the 'forward-slash' (/), on all platforms. 
 # That is, if you consistently use '/', the paths are automatically constructed based on the OS.
 # If you want to use the Windows back-slash, make sure to precede the path string with an 'r'.
@@ -151,8 +154,8 @@ plt.bar(x=ploty.index, height=ploty, width=300)
 
 # Calculate the future performance of the portfolio without any changes to buildings or composition of portfolio.
 SCENARIO = 'ssp585'
-listFutureFiles = glob.glob(f'{pathWthrFolder}/{station}_CMIP6/*.csv')
-pathSave = f'{pathWthrFolder}/future_dd.pickle'
+listFutureFiles = glob.glob(f'{PATH_WEATHER_FOLDER}/{station}_CMIP6/*.csv')
+pathSave = f'{PATH_WEATHER_FOLDER}/future_dd.pickle'
 
 hddFuture, cddFuture = future_weather(listFutureFiles, pathSave, scenario=SCENARIO, resolution=RESOLUTION)
 
@@ -166,23 +169,46 @@ plt.plot(ploty2.index, ploty2, color=colours.orange)
 plt.plot(ploty1.index, ploty1, color=colours.blue)
 
 listpf = list()
-for ccmodel in hddFuture.columns:
-    X = pd.merge(hddFuture.loc[:,ccmodel], cddFuture.loc[:,ccmodel], how='inner', left_index=True, right_index=True)
+listpfm = list()
+
+for cidx, ccmodel in enumerate(hddFuture.columns):
+
+    start = time.time()
+
+    X = pd.merge(hddFuture.loc[:,ccmodel], cddFuture.loc[:,ccmodel], how='inner', left_index=True, right_index=True, suffixes=['hdd', 'cdd'])
     X.dropna(how='any', inplace=True)
 
     scaler = StandardScaler().fit(X)
     X_scaled = scaler.transform(X)
     X_scaled = pd.DataFrame(X_scaled, columns = X.columns, index=X.index)
 
-    performanceFuture = portfolio.loc[:,'model'].apply(lambda x: x[0]*X_scaled.iloc[:,0] + x[1]*X_scaled.iloc[:,1] + x[2])
+    # This is the future without measures.
+    performanceFuture = portfolio.loc[:,'model'].apply(lambda m: calc_performance(m, X_scaled))
+    #    x[0]*X_scaled.iloc[:,0] + x[1]*X_scaled.iloc[:,1] + x[2])
+
+    # Apply the measures you've specified in your Excel file.
+    performanceFutureWithMeasures, costsMeasures = apply_measures(portfolio, X_scaled, PATH_MEASURES_FILE)
 
     perfPF = performanceFuture.sum(axis=0)
     perfPF.name = ccmodel
 
+    perfPFMeasures = performanceFutureWithMeasures.sum(axis=0)
+    perfPFMeasures.name = ccmodel
+
+    print(ccmodel)
+
     listpf.append(perfPF)
+    listpfm.append(perfPFMeasures)
+
+    end = time.time()
+
+    print(f'Time for this iteration {end-start}.')
+
+    if cidx >= 2:
+        break
 
 performancePortfolioFuture = pd.concat(listpf, axis=1)
-
+performancePortfolioFutureWithMeasures = pd.concat(listpfm, axis=1)
 
 ploty1 = performancePortfolioHistorical.resample('1YE').sum()
 ploty2 = performancePortfolioFuture.resample('1YE').sum().rolling('1200D').mean()
@@ -198,9 +224,18 @@ performancePortfolioFutureMean = performancePortfolioFuture.mean(axis=1)
 performancePortfolioFutureMean.name='mean'
 performancePortfolioFutureMean = performancePortfolioFutureMean.loc[(performancePortfolioFutureMean.index.year>performancePortfolioHistorical.index.year.max()) | (performancePortfolioFutureMean.index.year<TARGET_YEAR)]
 
+performancePortfolioFutureMeanWithMeasures = performancePortfolioFutureWithMeasures.mean(axis=1)
+performancePortfolioFutureMeanWithMeasures.name='mean'
+performancePortfolioFutureMeanWithMeasures = performancePortfolioFutureMeanWithMeasures.loc[(performancePortfolioFutureMeanWithMeasures.index.year>performancePortfolioHistorical.index.year.max()) | (performancePortfolioFutureMeanWithMeasures.index.year<TARGET_YEAR)]
+
+
 performancePortfolio = pd.DataFrame(pd.concat([performancePortfolioHistorical, performancePortfolioFutureMean]))
 performancePortfolio.sort_index(inplace=True)
 performancePortfolio.columns = ['consumption_kWh']
+
+performancePortfolioWithMeasures = pd.DataFrame(pd.concat([performancePortfolioHistorical, performancePortfolioFutureMeanWithMeasures]))
+performancePortfolioWithMeasures.sort_index(inplace=True)
+performancePortfolioWithMeasures.columns = ['consumption_kWh']
 
 # Get grid carbon emissions factors. These vary over time and are projected into the future.
 intensityCurve = grid_carbon(start_year=performancePortfolio.index.year.min(), end_year=TARGET_YEAR)
@@ -210,11 +245,20 @@ unitCost = electricity_cost()
 incomePerBuilding, valueperBuilding = income_value()
 
 performancePortfolio = pd.concat([performancePortfolio, pd.DataFrame(columns=['size'],index=performancePortfolio.index,data=PORTFOLIO_SIZE)], axis=1)
+performancePortfolioWithMeasures = pd.concat([performancePortfolioWithMeasures, pd.DataFrame(columns=['size'],index=performancePortfolioWithMeasures.index,data=PORTFOLIO_SIZE)], axis=1)
+
 performancePortfolio.loc[:,'income'] = performancePortfolio.loc[:,'size'] * incomePerBuilding
 performancePortfolio.loc[:,'value'] = performancePortfolio.loc[:,'size'] * valueperBuilding
 performancePortfolio.loc[:,'runningCosts'] = performancePortfolio.loc[:,'consumption_kWh']*unitCost
 
-# Apply the measures you've specified in your Excel file.
-performancePortfolio = apply_measures(performancePortfolio, PATH_MEASURES_FILE)
+performancePortfolioWithMeasures.loc[:,'income'] = performancePortfolioWithMeasures.loc[:,'size'] * incomePerBuilding
+performancePortfolioWithMeasures.loc[:,'value'] = performancePortfolioWithMeasures.loc[:,'size'] * valueperBuilding
+performancePortfolioWithMeasures.loc[:,'runningCosts'] = performancePortfolioWithMeasures.loc[:,'consumption_kWh']*unitCost
+
+PATH_OUT_FOLDER = f'{PATH_TOP_FOLDER}/outputs'
+if not os.path.isdir(PATH_OUT_FOLDER):
+    os.makedirs(PATH_OUT_FOLDER)
+performancePortfolio.to_excel(f'{PATH_OUT_FOLDER}/performancePortfolio.xlsx')
+performancePortfolioWithMeasures.to_excel(f'{PATH_OUT_FOLDER}/performancePortfolio.xlsx')
 
 print(portfolio)

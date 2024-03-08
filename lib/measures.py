@@ -3,12 +3,13 @@ import random
 import pandas as pd
 import numpy as np
 
-filePath = '/Users/prastogi/Library/CloudStorage/OneDrive-Personal/CEPT/Workshop-2024/DecarbPlan.xlsx'
-read_costs = pd.read_excel(filePath, sheet_name='KEYS - DO NOT EDIT', usecols='B:G', nrows=3, index_col=0)
+# filePath = '/Users/prastogi/Library/CloudStorage/OneDrive-Personal/CEPT/Workshop-2024/DecarbPlan.xlsx'
 
 
-def reduce_cooling_load(model:list, size:str='small'):
+def apply_CDD_measure(model:list, pathMeasuresFile:str, size:str='small'):
     # Reduce coefficient of CDD by a large or small amount. A larger reduction is more costly.
+
+    read_costs = pd.read_excel(pathMeasuresFile, sheet_name='KEYS - DO NOT EDIT', usecols='B:G', nrows=3, index_col=0)
 
     feature = 'CDD'
 
@@ -22,10 +23,12 @@ def reduce_cooling_load(model:list, size:str='small'):
     return model, cost
 
 
-def reduce_heating_load(model:list, size:str='small'):
+def apply_HDD_measure(model:list, pathMeasuresFile:str, size:str='small'):
     # Reduce coefficient of HDD by a large or small amount. A larger reduction is more costly.
 
-    feature = 'CDD'
+    read_costs = pd.read_excel(pathMeasuresFile, sheet_name='KEYS - DO NOT EDIT', usecols='B:G', nrows=3, index_col=0)
+
+    feature = 'HDD'
 
     if size == 'large':
         model[0] -= random.uniform(0.25, 0.5)*model[0]
@@ -37,8 +40,10 @@ def reduce_heating_load(model:list, size:str='small'):
     return model, cost
 
 
-def reduce_base_load(model:list, size:str='small'):
+def apply_BASE_LOAD_measure(model:list, pathMeasuresFile:str, size:str='small'):
     # Reduce base load (intercept) by a large or small amount. A larger reduction is more costly.
+
+    read_costs = pd.read_excel(pathMeasuresFile, sheet_name='KEYS - DO NOT EDIT', usecols='B:G', nrows=3, index_col=0)
 
     feature = 'BASE_LOAD'
 
@@ -52,8 +57,10 @@ def reduce_base_load(model:list, size:str='small'):
     return model, cost
 
 
-def pv_offset(model:list, size:str='small'):
+def apply_PV_measure(model:list, pathMeasuresFile:str, size:str='small'):
     # Use PV to offset base load.
+
+    read_costs = pd.read_excel(pathMeasuresFile, sheet_name='KEYS - DO NOT EDIT', usecols='B:G', nrows=3, index_col=0)
 
     feature = 'PV'
 
@@ -67,8 +74,10 @@ def pv_offset(model:list, size:str='small'):
     return model, cost
 
 
-def ppa_offset(model:list, size:str='small'):
+def apply_PPA_measure(model:list, pathMeasuresFile:str, size:str='small'):
     # Use PPA (power purchasing agreement) to offset base load.
+
+    read_costs = pd.read_excel(pathMeasuresFile, sheet_name='KEYS - DO NOT EDIT', usecols='B:G', nrows=3, index_col=0)
 
     feature = 'PPA'
 
