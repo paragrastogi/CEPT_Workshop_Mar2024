@@ -1,4 +1,5 @@
 import glob, os
+import copy
 import pickle
 import pandas as pd
 import numpy as np
@@ -23,7 +24,7 @@ path_models = "./"
 
 # The resolution at which the model should be trained.
 # DO NOT CHANGE THIS FOR NOW, WITHOUT CHANGING THE GROUPBY FUNCTIONS IN GET_METER_DATA.
-RESOLUTION = '1ME'
+RESOLUTION = '1M'
 
 metadata = get_metadata(path_metadata)
 weather = get_weather_data(path_weather, resolution=RESOLUTION)
@@ -78,10 +79,12 @@ for usage in simpleUsages:
         y = subData.loc[:,['eui']]
 
         X_numeric = X.select_dtypes(include=np.number)
-        scaler = StandardScaler().fit(X_numeric)
-        X_scaled = scaler.transform(X_numeric)
-        X_scaled = pd.DataFrame(X_scaled, columns = X_numeric.columns, index=X_numeric.index)
-        X_scaled = pd.concat([X.select_dtypes(exclude=np.number), X_scaled], axis=1)
+        # scaler = StandardScaler().fit(X_numeric)
+        # X_scaled = scaler.transform(X_numeric)
+        # X_scaled = pd.DataFrame(X_scaled, columns = X_numeric.columns, index=X_numeric.index)
+        # X_scaled = pd.concat([X.select_dtypes(exclude=np.number), X_scaled], axis=1)
+
+        X_scaled = copy.copy(X)
 
         # X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2, random_state=42)
 

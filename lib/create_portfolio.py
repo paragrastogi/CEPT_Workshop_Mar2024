@@ -2,7 +2,6 @@
 Compose a portfolio with a fixed size by sampling different building types and/or regions.
 '''
 
-
 import glob, os
 import copy
 import pickle
@@ -10,6 +9,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import random
+
 
 def create_portfolio(size:int=100, btypes:list='all', location:list='all', path_models:str='./', randomness:bool=True):
 
@@ -35,14 +35,9 @@ def create_portfolio(size:int=100, btypes:list='all', location:list='all', path_
 
 def inject_randomness(mdl):
     # inject a bit of randomness into the learned coefficients.
-    
-    # mdl.coef_[0] = mdl.coef_[0] + randomcoeffs[:2]
-    # mdl.intercept_ = mdl.intercept_ + randomcoeffs[-1]
 
-    print(mdl)
+    jitters = [random.uniform(0.95,1) for x in mdl]
 
-    jitters = [random.normalvariate(0,1) for x in mdl]
-
-    mdl = [x+y for x,y in zip(mdl, jitters)]
+    mdl = [x*y for x,y in zip(mdl, jitters)]
 
     return mdl

@@ -5,16 +5,16 @@ from lib.petites import dd_ashrae
 
 def future_weather(listFutureFiles, pathSave, scenario, resolution):
 
-    if os.path.isfile(pathSave):
-        loaded = pd.read_pickle(pathSave)
-        return loaded['hdd'], loaded['cdd'] 
+    # if os.path.isfile(pathSave):
+    #     loaded = pd.read_pickle(pathSave)
+    #     return loaded['hdd'], loaded['cdd'] 
 
     # TAS MIN
     filePath = [x for x in listFutureFiles if ('tasmin' in x and scenario in x)]
     tasmin = pd.read_csv(filePath[0])
 
     # Get index ready.
-    futureIndex = pd.date_range(start = f'{tasmin.loc[:,'Year'].min()}-01-01', end = f'{tasmin.loc[:,'Year'].max()}-12-31', freq='1D')
+    futureIndex = pd.date_range(start = f"{tasmin.loc[:,'Year'].min()}-01-01", end = f"{tasmin.loc[:,'Year'].max()}-12-31", freq='1D')
 
     tasmin.set_index(futureIndex, inplace=True)
     tasmin.drop(columns=['Year', 'Day'], inplace=True)

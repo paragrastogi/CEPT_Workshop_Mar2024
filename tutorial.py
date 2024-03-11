@@ -54,8 +54,8 @@ randomseed = 42 # round(datetime.timestamp(datetime.now()))
 ##
 
 # Read weather data from location.
-station = 'Glasgow'
-epwFolder = 'GBR_SCT_Glasgow.Intl.AP.031400'
+station = 'Ahmedabad'
+epwFolder = 'IND_GJ_Ahmedabad.Intl.AP.426470'
 
 TARGET_INTENSITY_DECREASE = 0.98 # 98% decrease in energy intensity for buildings.
 TARGET_YEAR = 2050 # Year by which target intensity decrease must be achieved.
@@ -101,7 +101,7 @@ cdd.name = 'cdd'
 
 # Plot historical CDD. You can also plot HDD but they are so few and far between in Ahmedabad it's pointless. To keep the graph relatively clutter-free, take the sum of performance over each year and plot that instead of monthly values.
 
-ploty = cdd.resample('1YE').sum()
+ploty = cdd.resample('1Y').sum()
 fig, axes = plt.subplots(nrows=1, ncols=1, squeeze=True, sharey=True, figsize=[12,8])
 ax = axes #.flatten()
 fig.tight_layout(pad=3)
@@ -145,7 +145,7 @@ performancePortfolioHistorical.name = 'performance'
 ## 
 # Plot historical performance. To keep the graph relatively clutter-free, take the sum of performance over each year and plot that instead of monthly values.
 
-ploty = performancePortfolioHistorical.resample('1YE').sum()
+ploty = performancePortfolioHistorical.resample('1Y').sum()
 fig, axes = plt.subplots(nrows=1, ncols=1, squeeze=True, sharey=True, figsize=[12,8])
 ax = axes #.flatten()
 fig.tight_layout(pad=3)
@@ -159,8 +159,8 @@ pathSave = f'{PATH_WEATHER_FOLDER}/future_dd.pickle'
 
 hddFuture, cddFuture = future_weather(listFutureFiles, pathSave, scenario=SCENARIO, resolution=RESOLUTION)
 
-ploty1 = cdd.resample('1YE').sum()
-ploty2 = cddFuture.resample('1YE').sum().rolling('1200D').mean()
+ploty1 = cdd.resample('1Y').sum()
+ploty2 = cddFuture.resample('1Y').sum().rolling('1200D').mean()
 # ploty2 = cddFuture.rolling(window='360D').sum()
 fig, axes = plt.subplots(nrows=1, ncols=1, squeeze=True, sharey=True, figsize=[12,8])
 ax = axes #.flatten()
@@ -178,9 +178,10 @@ for cidx, ccmodel in enumerate(hddFuture.columns):
     X = pd.merge(hddFuture.loc[:,ccmodel], cddFuture.loc[:,ccmodel], how='inner', left_index=True, right_index=True, suffixes=['hdd', 'cdd'])
     X.dropna(how='any', inplace=True)
 
-    scaler = StandardScaler().fit(X)
-    X_scaled = scaler.transform(X)
-    X_scaled = pd.DataFrame(X_scaled, columns = X.columns, index=X.index)
+    # scaler = StandardScaler().fit(X)
+    # X_scaled = scaler.transform(X)
+    # X_scaled = pd.DataFrame(X_scaled, columns = X.columns, index=X.index)
+    X_scaled = copy.copy(X)
 
     # This is the future without measures.
     performanceFuture = portfolio.loc[:,'model'].apply(lambda m: calc_performance(m, X_scaled))
@@ -204,14 +205,14 @@ for cidx, ccmodel in enumerate(hddFuture.columns):
 
     print(f'Time for this iteration {end-start}.')
 
-    if cidx >= 2:
+    if cidx >= 5:
         break
 
 performancePortfolioFuture = pd.concat(listpf, axis=1)
 performancePortfolioFutureWithMeasures = pd.concat(listpfm, axis=1)
 
-ploty1 = performancePortfolioHistorical.resample('1YE').sum()
-ploty2 = performancePortfolioFuture.resample('1YE').sum().rolling('1200D').mean()
+ploty1 = performancePortfolioHistorical.resample('1Y').sum()
+ploty2 = performancePortfolioFuture.resample('1Y').sum().rolling('1200D').mean()
 # ploty2 = cddFuture.rolling(window='360D').sum()
 fig, axes = plt.subplots(nrows=1, ncols=1, squeeze=True, sharey=True, figsize=[12,8])
 ax = axes #.flatten()
