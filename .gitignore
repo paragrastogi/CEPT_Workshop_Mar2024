@@ -151,3 +151,9 @@ dmypy.json
 cython_debug/
 
 .DS_Store
+
+# Data files stay out of git: keep them on SharePoint or regenerate them.
+*.parquet
+*.pickle
+*.pkl
+*.epw
